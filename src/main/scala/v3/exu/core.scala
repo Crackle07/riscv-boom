@@ -319,7 +319,19 @@ class BoomCore()(implicit p: Parameters) extends BoomModule
   dontTouch(debug_irt_reg)
 
   //TEST: performance counters
-  if (boomParams.enablePerfPrint) {
+  val _datacollEnabled: Boolean = {
+    sys.env.getOrElse("DATACOLL", "").toLowerCase == "on" || {
+      val root = sys.env.getOrElse("CHIPYARD_ROOT", ".")
+      val f = new java.io.File(s"$root/.chipyard/config.json")
+      if (f.exists()) try {
+        val src = scala.io.Source.fromFile(f)
+        val text = src.mkString; src.close()
+        text.contains("\"enable_data_collection\": \"on\"")
+      } catch { case _: Throwable => false }
+      else false
+    }
+  }
+  if (boomParams.enablePerfPrint || _datacollEnabled) {
     val ctr_cycles           = RegInit(0.U(64.W))
     val ctr_instret          = RegInit(0.U(64.W))
     val ctr_dcache_miss      = RegInit(0.U(64.W))
