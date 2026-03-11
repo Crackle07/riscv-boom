@@ -61,6 +61,7 @@ case class BoomCoreParams(
   enableSuperscalarSnapshots: Boolean = true,
   enableSlowBTBRedirect: Boolean = false,
   enableBPDHPMs: Boolean = false,
+  enablePerfPrint: Boolean = false,
 
   useAtomicsOnlyForIO: Boolean = false,
   ftq: FtqParameters = FtqParameters(nEntries=16),

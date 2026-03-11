@@ -861,8 +861,9 @@ class BoomNonBlockingDCacheModule(outer: BoomNonBlockingDCache) extends LazyModu
 
   TLArbiter.lowest(edge, tl_out.c, wb.io.release, prober.io.rep)
 
-  io.lsu.perf.release := edge.done(tl_out.c)
-  io.lsu.perf.acquire := edge.done(tl_out.a)
+  io.lsu.perf.release  := edge.done(tl_out.c)
+  io.lsu.perf.acquire  := edge.done(tl_out.a)
+  io.lsu.perf.prefetch := prefetch_fire
 
   // load data gen
   val s2_data_word_prebypass = widthMap(w => s2_data_muxed(w) >> Cat(s2_word_idx(w), 0.U(log2Ceil(coreDataBits).W)))

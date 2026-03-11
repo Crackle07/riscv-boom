@@ -99,8 +99,9 @@ class LSUDMemIO(implicit p: Parameters, edge: TLEdgeOut) extends BoomBundle()(p)
   val ordered     = Input(Bool())
 
   val perf = Input(new Bundle {
-    val acquire = Bool()
-    val release = Bool()
+    val acquire  = Bool()
+    val release  = Bool()
+    val prefetch = Bool()
   })
 
 }
@@ -156,9 +157,10 @@ class LSUCoreIO(implicit p: Parameters) extends BoomBundle()(p)
   val scontext = Input(UInt())
 
   val perf        = Output(new Bundle {
-    val acquire = Bool()
-    val release = Bool()
-    val tlbMiss = Bool()
+    val acquire  = Bool()
+    val release  = Bool()
+    val tlbMiss  = Bool()
+    val prefetch = Bool()
   })
 }
 
@@ -314,9 +316,10 @@ class LSU(implicit p: Parameters, edge: TLEdgeOut) extends BoomModule()(p)
     instruction = false, lgMaxSize = log2Ceil(coreDataBytes), rocket.TLBConfig(dcacheParams.nTLBSets, dcacheParams.nTLBWays)))
 
   io.ptw <> dtlb.io.ptw
-  io.core.perf.tlbMiss := io.ptw.req.fire
-  io.core.perf.acquire := io.dmem.perf.acquire
-  io.core.perf.release := io.dmem.perf.release
+  io.core.perf.tlbMiss  := io.ptw.req.fire
+  io.core.perf.acquire  := io.dmem.perf.acquire
+  io.core.perf.release  := io.dmem.perf.release
+  io.core.perf.prefetch := io.dmem.perf.prefetch
 
 
 

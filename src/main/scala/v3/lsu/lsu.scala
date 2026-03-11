@@ -95,17 +95,18 @@ class LSUDMemIO(implicit p: Parameters, edge: TLEdgeOut) extends BoomBundle()(p)
 
   val release = Flipped(new DecoupledIO(new TLBundleC(edge.bundle)))
 
-  // Clears prefetching MSHRs
+  // TEST: Clears prefetching MSHRs
   val force_order  = Output(Bool())
   val ordered     = Input(Bool())
 
   val perf = Input(new Bundle {
     val acquire = Bool()
     val release = Bool()
+    val prefetch = Bool()
   })
 
 }
-
+// TEST - end
 class LSUCoreIO(implicit p: Parameters) extends BoomBundle()(p)
 {
   val exe = Vec(memWidth, new LSUExeIO)
@@ -148,10 +149,12 @@ class LSUCoreIO(implicit p: Parameters) extends BoomBundle()(p)
 
   val tsc_reg     = Input(UInt())
 
-  val perf        = Output(new Bundle {
+//TEST: LSU performance counters output
+  val perf = Output(new Bundle {
     val acquire = Bool()
     val release = Bool()
     val tlbMiss = Bool()
+    val prefetch = Bool()
   })
 }
 
@@ -251,6 +254,7 @@ class LSU(implicit p: Parameters, edge: TLEdgeOut) extends BoomModule()(p)
   io.core.perf.tlbMiss := io.ptw.req.fire
   io.core.perf.acquire := io.dmem.perf.acquire
   io.core.perf.release := io.dmem.perf.release
+  io.core.perf.prefetch := io.dmem.perf.prefetch
 
 
 

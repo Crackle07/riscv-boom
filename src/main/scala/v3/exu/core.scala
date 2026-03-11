@@ -318,6 +318,89 @@ class BoomCore()(implicit p: Parameters) extends BoomModule
   dontTouch(debug_tsc_reg)
   dontTouch(debug_irt_reg)
 
+  //TEST: performance counters
+  if (boomParams.enablePerfPrint) {
+    val ctr_cycles           = RegInit(0.U(64.W))
+    val ctr_instret          = RegInit(0.U(64.W))
+    val ctr_dcache_miss      = RegInit(0.U(64.W))
+    val ctr_icache_miss      = RegInit(0.U(64.W))
+    val ctr_dcache_release   = RegInit(0.U(64.W)) // D$ writebacks (evictions to L2)
+    val ctr_prefetch_issued  = RegInit(0.U(64.W)) // prefetches sent to MSHR
+    val ctr_br_mispredict    = RegInit(0.U(64.W))
+    val ctr_br_resolved      = RegInit(0.U(64.W)) // all resolved branches (for mispredict rate)
+    val ctr_itlb_miss        = RegInit(0.U(64.W))
+    val ctr_dtlb_miss        = RegInit(0.U(64.W))
+    val ctr_l2tlb_miss       = RegInit(0.U(64.W))
+
+    ctr_cycles  := ctr_cycles + 1.U
+    ctr_instret := ctr_instret + PopCount(rob.io.commit.arch_valids.asUInt)
+
+    when (io.lsu.perf.acquire)  { ctr_dcache_miss     := ctr_dcache_miss     + 1.U }
+    when (io.ifu.perf.acquire)  { ctr_icache_miss     := ctr_icache_miss     + 1.U }
+    when (io.lsu.perf.release)  { ctr_dcache_release  := ctr_dcache_release  + 1.U }
+    when (io.lsu.perf.prefetch) { ctr_prefetch_issued := ctr_prefetch_issued + 1.U }
+    when (b2.mispredict)        { ctr_br_mispredict   := ctr_br_mispredict   + 1.U }
+    when (b2.valid)             { ctr_br_resolved     := ctr_br_resolved     + 1.U }
+    when (io.ifu.perf.tlbMiss)  { ctr_itlb_miss       := ctr_itlb_miss       + 1.U }
+    when (io.lsu.perf.tlbMiss)  { ctr_dtlb_miss       := ctr_dtlb_miss       + 1.U }
+    when (io.ptw.perf.l2miss)   { ctr_l2tlb_miss      := ctr_l2tlb_miss      + 1.U }
+
+    class BoomPerfFinalPrint extends BlackBox with HasBlackBoxInline {
+      val io = IO(new Bundle {
+        val cycles          = Input(UInt(64.W))
+        val instret         = Input(UInt(64.W))
+        val dcache_miss     = Input(UInt(64.W))
+        val icache_miss     = Input(UInt(64.W))
+        val dcache_release  = Input(UInt(64.W))
+        val prefetch_issued = Input(UInt(64.W))
+        val br_mispredict   = Input(UInt(64.W))
+        val br_resolved     = Input(UInt(64.W))
+        val itlb_miss       = Input(UInt(64.W))
+        val dtlb_miss       = Input(UInt(64.W))
+        val l2tlb_miss      = Input(UInt(64.W))
+      })
+      setInline("BoomPerfFinalPrint.sv",
+        s"""|module BoomPerfFinalPrint(
+            |  input [63:0] cycles,
+            |  input [63:0] instret,
+            |  input [63:0] dcache_miss,
+            |  input [63:0] icache_miss,
+            |  input [63:0] dcache_release,
+            |  input [63:0] prefetch_issued,
+            |  input [63:0] br_mispredict,
+            |  input [63:0] br_resolved,
+            |  input [63:0] itlb_miss,
+            |  input [63:0] dtlb_miss,
+            |  input [63:0] l2tlb_miss
+            |);
+            |`ifndef SYNTHESIS
+            |  integer fd;
+            |  final begin
+            |    fd = $$fopen("output/boom_perf.out", "a");
+            |    $$fdisplay(fd, "BOOM_PERF_FINAL cycles=%0d instret=%0d dcache_miss=%0d icache_miss=%0d dcache_release=%0d prefetch_issued=%0d br_mispredict=%0d br_resolved=%0d itlb_miss=%0d dtlb_miss=%0d l2tlb_miss=%0d",
+            |      cycles, instret, dcache_miss, icache_miss, dcache_release, prefetch_issued, br_mispredict, br_resolved, itlb_miss, dtlb_miss, l2tlb_miss);
+            |    $$fclose(fd);
+            |  end
+            |`endif
+            |endmodule
+        """.stripMargin)
+    }
+
+    val boomPerfPrint = Module(new BoomPerfFinalPrint)
+    boomPerfPrint.io.cycles          := ctr_cycles
+    boomPerfPrint.io.instret         := ctr_instret
+    boomPerfPrint.io.dcache_miss     := ctr_dcache_miss
+    boomPerfPrint.io.icache_miss     := ctr_icache_miss
+    boomPerfPrint.io.dcache_release  := ctr_dcache_release
+    boomPerfPrint.io.prefetch_issued := ctr_prefetch_issued
+    boomPerfPrint.io.br_mispredict   := ctr_br_mispredict
+    boomPerfPrint.io.br_resolved     := ctr_br_resolved
+    boomPerfPrint.io.itlb_miss       := ctr_itlb_miss
+    boomPerfPrint.io.dtlb_miss       := ctr_dtlb_miss
+    boomPerfPrint.io.l2tlb_miss      := ctr_l2tlb_miss
+  }
+  //TEST END
+
   //****************************************
   // Print-out information about the machine
 
